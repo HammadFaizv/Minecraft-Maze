@@ -9,8 +9,6 @@ void clearAbove(int row, int col, mcpp::Coordinate basePoint) {
     mcpp::Coordinate cord = basePoint + mcpp::Coordinate(row, 0, col); //gets the coordinates of the highest non air block
 
     int y = mc.getHeight(cord.x, cord.z); //y value of the highest non air block
-   // std::cout << "cord:           " << cord << std::endl;
-   // std::cout << "cord y highest: " << y << std::endl;
     int bpHeight = basePoint.y; //gets the y value of the basePoint
 
     while(y>bpHeight){
@@ -20,20 +18,18 @@ void clearAbove(int row, int col, mcpp::Coordinate basePoint) {
     }
 }
 
-void captureTerrain(int row, int col, mcpp::Coordinate basePoint, std::vector<std::pair<mcpp::Coordinate, mcpp::BlockType>>* terrainPtr) {
+void captureTerrain(int row, int col, mcpp::Coordinate basePoint) {
     mcpp::MinecraftConnection mc;
     mcpp::Coordinate cord = basePoint + mcpp::Coordinate(row, 0, col); 
     int y = mc.getHeight(cord.x, cord.z); // getting highest non-air block y
     int bpHeight = basePoint.y; 
+    if( y - bpHeight < 4) y = bpHeight + 4; // to ensure not to leave any bricks behind when restoring
 
-    std::vector<std::pair<mcpp::Coordinate, mcpp::BlockType>>& terrain = *terrainPtr; //setting vector to the pointer
-
-    while(bpHeight > y) {
-        cord.y = 0;
-        mcpp::Coordinate vectorCords = cord + mcpp::Coordinate(0, y, 0);
-        mcpp::BlockType block = mc.getBlock(vectorCords);
-        terrain.push_back(std::make_pair(vectorCords, block));
-        y++;
+    while( y > bpHeight-2) {
+        mcpp::Coordinate bk_coord = mcpp::Coordinate(cord.x, y, cord.z);
+        mcpp::BlockType block = mc.getBlock(bk_coord);
+        terrain.push_back(std::make_pair(bk_coord, block));
+        y--;
     }
 }
 
@@ -50,9 +46,8 @@ void buildBelow(int row, int col, mcpp::Coordinate basePoint) {
     }
 }
 
-void restoreTerrain(std::vector<std::pair<mcpp::Coordinate, mcpp::BlockType>>* terrainPtr) {
+void restoreTerrain() {
     mcpp::MinecraftConnection mc; 
-    std::vector<std::pair<mcpp::Coordinate, mcpp::BlockType>>& terrain = *terrainPtr;
     for(const auto& pair : terrain) {
         mc.setBlock(pair.first, pair.second);
     }
@@ -98,8 +93,7 @@ void Maze::build_maze(void){
     mc.postToChat("Generating maze...");
 
     // std::vector<CoordinateBlockPair> terrain; 
-    std::vector<std::pair<mcpp::Coordinate, mcpp::BlockType>>* terrainPtr = &terrain;  // pointer to the terrain vector
-    
+    // std::vector<std::pair<mcpp::Coordinate, mcpp::BlockType>>* terrainPtr = &terrain;  
     mc.setPlayerPosition(this->basePoint + mcpp::Coordinate(0, 10, 0));
 
     // first capture all non-air blocks
@@ -107,7 +101,7 @@ void Maze::build_maze(void){
 
     for (int row = 0; row < this->xlen; row++) {
         for (int col = 0; col < this->zlen; col++) {
-            captureTerrain(row, col, this->basePoint, terrainPtr); // capture blocks
+            captureTerrain(row, col, this->basePoint); // capture blocks
             clearAbove(row, col, this->basePoint); //function to clear all blocks above basepoint
             mc.setBlock(this->basePoint + mcpp::Coordinate(row, 0, col), mcpp::Blocks::AIR); //replace env with air
             buildBelow(row, col, this->basePoint); //function to build up blocks beneath maze
@@ -116,10 +110,10 @@ void Maze::build_maze(void){
 
     std::cout << "Terrain size: " << terrain.size() << std::endl; //prints how many blocks under the maze that got replaced
 
-    for (const auto& pair : terrain) { //for loop to print out coordinates and blockType of terrain
-        const mcpp::Coordinate& coord = pair.first;
-        const mcpp::BlockType& blockType = pair.second;
-    }
+    // for (const auto& pair : terrain) { //for loop to print out coordinates and blockType of terrain
+    //     const mcpp::Coordinate& coord = pair.first;
+    //     const mcpp::BlockType& blockType = pair.second;
+    // }
 
     for (int row = 0; row < this->xlen; row++) { //maze building
         for (int col = 0; col < this->zlen; col++) {
@@ -136,12 +130,10 @@ void Maze::build_maze(void){
     mc.postToChat("Maze is ready!!!");
 }
 
-
-
-
 Maze::~Maze()
 {
-    restoreTerrain(&terrain); // Restore the terrain when Maze is destroyed
+    std::cout<<"terrain being restored"<<std::endl;
+    restoreTerrain(); // Restore the terrain when Maze is destroyed
     for (int row = 0; row < this->xlen ; row++) {
         delete[] envStructure[row];
     }

@@ -4,6 +4,8 @@
 #include <vector>
 #include <mcpp/mcpp.h>
 
+std::vector<std::pair<mcpp::Coordinate, mcpp::BlockType>> terrain; // to hold the terrain
+
 class Maze
 {
 
@@ -22,7 +24,6 @@ public:
     void build_maze(void);
 
 private:
-    std::vector<std::pair<mcpp::Coordinate, mcpp::BlockType>> terrain; // to hold the terrain
     mcpp::Coordinate basePoint;
     int xlen;
     int zlen;
